@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-services Tirage — Tirage au sort pour concours</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo" onclick="goHome()" title="Accueil">
+      <span class="logo-icon">🎰</span>
+      <span class="logo-text">E-services Tirage</span>
+    </div>
+    <nav class="nav-tabs">
+      <button class="tab active" data-tab="import">🏠 Accueil</button>
+      <button class="tab" data-tab="participants">👥 Participants</button>
+      <button class="tab" data-tab="tirage">🎯 Tirage</button>
+    </nav>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ===== ONGLET IMPORT ===== -->
+    <section id="tab-import" class="tab-content active">
+      <div class="section-title">
+        <h2>Lancer un tirage au sort</h2>
+        <p>Collez le lien de votre publication, le système détecte tout automatiquement</p>
+      </div>
+
+      <!-- BOÎTE MAGIQUE : lien unique -->
+      <div class="magic-box">
+        <div class="magic-icons">
+          <span class="magic-icon" title="YouTube">▶️</span>
+          <span class="magic-icon" title="Facebook">📘</span>
+          <span class="magic-icon" title="Instagram">📸</span>
+        </div>
+        <h3 class="magic-title">Collez le lien de votre publication</h3>
+        <p class="magic-sub">YouTube (lien direct) · Facebook &amp; Instagram (connexion requise)</p>
+
+        <div class="magic-input-wrap">
+          <span class="magic-detect" id="magicDetect">🔗</span>
+          <input type="text" id="magicUrl" class="magic-input"
+            placeholder="https://..." oninput="detectPlatform()" />
+        </div>
+
+        <div id="magicHint" class="magic-hint"></div>
+
+        <div id="magicProgress" class="magic-progress hidden">
+          <div class="spinner spinner-white"></div>
+          <span id="magicProgressText">Récupération des commentaires...</span>
+        </div>
+
+        <button class="magic-btn" id="magicBtn" onclick="importMagic()">
+          🎲 Récupérer les commentaires et tirer au sort
+        </button>
+
+        <div class="magic-footer">
+          <span id="magicCount">Aucun participant chargé</span>
+        </div>
+      </div>
+
+      <!-- Séparateur -->
+      <div class="divider"><span>ou choisissez une source précise</span></div>
+
+      <!-- YOUTUBE -->
+      <div class="card youtube-card">
+        <div class="card-header">
+          <span class="card-icon">▶️</span>
+          <h3>YouTube</h3>
+          <span class="badge-new">AUTO</span>
+        </div>
+        <p class="card-desc">Collez le lien d'une vidéo YouTube publique. <strong>Tous</strong> les commentaires seront importés (sans limite).</p>
+        <div class="social-input-row">
+          <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
+          <input type="hidden" id="youtubeMax" value="1000000" />
+        </div>
+        <div id="youtubeProgress" class="youtube-progress hidden">
+          <div class="spinner"></div>
+          <span id="youtubeProgressText">Récupération des commentaires...</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-youtube" id="btnYoutube" onclick="importFromYoutube()">
+            ▶️ Importer les commentaires YouTube
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== PANNEAU META (Facebook + Instagram) ===== -->
+      <div class="card meta-panel">
+        <div class="card-header">
+          <span class="card-icon">🔗</span>
+          <h3>Facebook &amp; Instagram</h3>
+          <span class="badge-auth" id="metaBadge">Non connecté</span>
+        </div>
+
+        <!-- Non connecté -->
+        <div id="metaNotConnected">
+          <p class="card-desc">Connectez votre compte pour choisir une de vos publications et lancer le tirage sur ses commentaires.</p>
+          <button class="btn btn-facebook" onclick="connectInstagram()">
+            🔗 Connecter Facebook / Instagram
+          </button>
+        </div>
+
+        <!-- Connecté -->
+        <div id="metaConnectedPanel" style="display:none">
+          <div class="meta-user-row">
+            <span class="meta-user-name" id="metaUserName"></span>
+            <button class="btn-link" id="metaDisconnectBtn" onclick="disconnectMeta()">Déconnecter</button>
+          </div>
+
+          <!-- Choix plateforme -->
+          <div class="meta-platform-toggle">
+            <button class="meta-tab active" id="metaTabFb" onclick="switchMetaPlatform('facebook')">📘 Facebook</button>
+            <button class="meta-tab" id="metaTabIg" onclick="switchMetaPlatform('instagram')">📸 Instagram</button>
+          </div>
+
+          <!-- Sélecteur de page/compte -->
+          <div class="meta-select-row">
+            <label id="metaSelectLabel">Choisissez votre page :</label>
+            <select id="metaAccountSelect" onchange="loadMetaPosts()">
+              <option value="">— Chargement... —</option>
+            </select>
+          </div>
+
+          <!-- Grille des posts -->
+          <div id="metaPostsLoading" class="meta-loading hidden">
+            <div class="spinner spinner-blue"></div>
+            <span>Chargement de vos publications...</span>
+          </div>
+          <div id="metaPostsGrid" class="meta-posts-grid"></div>
+          <p class="meta-hint" id="metaPostsHint"></p>
+        </div>
+      </div>
+
+      <!-- Options de filtre -->
+      <div class="card options-card">
+        <div class="card-header">
+          <span class="card-icon">⚙️</span>
+          <h3>Options de filtrage</h3>
+        </div>
+        <div class="options-grid">
+          <label class="toggle-label">
+            <input type="checkbox" id="removeDuplicates" checked />
+            <span class="toggle"></span>
+            Supprimer les doublons (même nom)
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="removeEmpty" checked />
+            <span class="toggle"></span>
+            Ignorer les lignes vides
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="useKeyword" />
+            <span class="toggle"></span>
+            Filtrer par mot-clé
+          </label>
+          <div class="keyword-input" id="keywordDiv" style="display:none">
+            <input type="text" id="keywordInput" placeholder="Ex: #concours, taguer un ami..." />
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut import -->
+      <div id="importStatus" class="import-status hidden">
+        <span id="importStatusText"></span>
+      </div>
+
+    </section>
+
+    <!-- ===== ONGLET PARTICIPANTS ===== -->
+    <section id="tab-participants" class="tab-content">
+      <div class="section-title">
+        <h2>Liste des participants</h2>
+        <p id="participantCount">0 participant(s) importé(s)</p>
+      </div>
+
+      <div class="participants-toolbar">
+        <input type="text" id="searchParticipants" placeholder="🔍 Rechercher un participant..." oninput="filterParticipants()" />
+        <button class="btn btn-danger-outline" onclick="clearAll()">🗑️ Tout effacer</button>
+      </div>
+
+      <div class="participants-list" id="participantsList">
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <p>Aucun participant pour l'instant</p>
+          <p class="empty-hint">Allez dans l'onglet "Importer" pour ajouter des participants</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ONGLET TIRAGE ===== -->
+    <section id="tab-tirage" class="tab-content">
+      <div class="section-title">
+        <h2>Tirage au sort</h2>
+        <p id="tirageCount">Aucun participant importé</p>
+      </div>
+
+      <div class="tirage-container">
+
+        <!-- Options tirage -->
+        <div class="card tirage-options">
+          <div class="options-grid">
+            <div class="option-item">
+              <label>Nombre de gagnants</label>
+              <input type="number" id="nbGagnants" value="1" min="1" max="100" />
+            </div>
+            <label class="toggle-label">
+              <input type="checkbox" id="allowRepeat" />
+              <span class="toggle"></span>
+              Autoriser le même gagnant plusieurs fois
+            </label>
+          </div>
+        </div>
+
+        <!-- Machine de tirage -->
+        <div class="machine">
+          <div class="machine-screen" id="machineScreen">
+            <div class="machine-idle">
+              <div class="machine-icon">🎰</div>
+              <p>Prêt pour le tirage</p>
+            </div>
+          </div>
+
+          <button class="btn-tirage" id="btnTirage" onclick="lancerTirage()">
+            <span class="btn-tirage-text">🎲 LANCER LE TIRAGE</span>
+          </button>
+        </div>
+
+        <!-- Résultats -->
+        <div class="results-container" id="resultsContainer" style="display:none">
+          <h3>🏆 Gagnant(s)</h3>
+          <div class="winners-list" id="winnersList"></div>
+          <div class="result-actions">
+            <button class="btn btn-secondary" onclick="exportResults()">📤 Exporter les résultats</button>
+            <button class="btn btn-primary" onclick="nouveauTirage()">🔄 Nouveau tirage</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+  </main>
+
+  <!-- ===== PIED DE PAGE / CRÉDITS ===== -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+
+      <!-- eServices Kouba -->
+      <div class="footer-col">
+        <div class="footer-brand">
+          <span class="footer-brand-icon">🎰</span>
+          <span class="footer-brand-name">eServices Kouba</span>
+        </div>
+        <p class="footer-text">Services numériques · Tirage au sort pour concours, abonnements, visa et plus.</p>
+        <div class="footer-socials">
+          <a href="https://www.instagram.com/e.services.kouba/" target="_blank" rel="noopener" class="footer-social ig" title="Instagram">📸</a>
+          <a href="https://www.tiktok.com/@eservices_kouba" target="_blank" rel="noopener" class="footer-social tt" title="TikTok">🎵</a>
+          <a href="https://api.whatsapp.com/send/?phone=%2B213562925172" target="_blank" rel="noopener" class="footer-social wa" title="WhatsApp">💬</a>
+          <a href="mailto:e.services.kouba@gmail.com" class="footer-social mail" title="Email">✉️</a>
+        </div>
+      </div>
+
+      <!-- Développeur -->
+      <div class="footer-col footer-col-dev">
+        <p class="footer-dev-label">Développé par</p>
+        <div class="footer-dev-name">Sekka Abdallah</div>
+        <p class="footer-text">Développeur d'applications web &amp; mobiles.</p>
+        <div class="footer-socials">
+          <a href="https://www.facebook.com/abdellah.sekka.2025" target="_blank" rel="noopener" class="footer-social fb" title="Facebook">📘</a>
+          <a href="https://www.instagram.com/abdallah__sekka/" target="_blank" rel="noopener" class="footer-social ig" title="Instagram">📸</a>
+          <a href="https://www.linkedin.com/in/abdallah-sekka-9b2721368/" target="_blank" rel="noopener" class="footer-social li" title="LinkedIn">💼</a>
+          <a href="https://github.com/Eserviceskouba" target="_blank" rel="noopener" class="footer-social gh" title="GitHub">🐙</a>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer-bottom">© 2026 eServices Kouba — Tous droits réservés</div>
+  </footer>
+
+  <!-- MODAL GAGNANT -->
+  <div class="modal-overlay" id="winnerModal" style="display:none">
+    <div class="modal">
+      <div class="confetti-container" id="confettiContainer"></div>
+      <div class="winner-display">
+        <div class="winner-crown">👑</div>
+        <h2 class="winner-title">Félicitations !</h2>
+        <div class="winner-names" id="modalWinnerNames"></div>
+        <p class="winner-subtitle">Gagnant(s) du tirage au sort</p>
+        <div class="winner-meta" id="winnerMeta"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
+          <button class="btn btn-primary" onclick="exportResults()">📤 Exporter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

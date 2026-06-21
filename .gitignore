@@ -1,0 +1,13 @@
+# Secrets — NE JAMAIS pousser sur GitHub
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Outils
+.claude/
+*.log
+.DS_Store
