@@ -101,10 +101,13 @@
 
         <!-- Non connecté -->
         <div id="metaNotConnected">
-          <p class="card-desc">🔒 Accès réservé au propriétaire. Entrez le mot de passe pour gérer les tirages Facebook / Instagram. <em>(Le tirage YouTube ci-dessus reste accessible à tous.)</em></p>
-          <button class="btn btn-facebook" onclick="connectInstagram()">
-            🔒 Accès propriétaire
+          <p class="card-desc">Connectez votre compte pour faire un tirage sur les commentaires de <strong>vos propres</strong> publications (compte Facebook gérant une Page, ou Instagram pro/créateur lié).</p>
+          <button class="btn btn-facebook" onclick="connectClient()">
+            📘 Se connecter avec Facebook
           </button>
+          <div class="owner-link-row">
+            <button class="btn-link" onclick="ownerLogin()">🔒 Accès propriétaire</button>
+          </div>
         </div>
 
         <!-- Connecté -->
@@ -281,7 +284,11 @@
       </div>
 
     </div>
-    <div class="footer-bottom">© 2026 eServices Kouba — Tous droits réservés</div>
+    <div class="footer-bottom">
+      © 2026 eServices Kouba — Tous droits réservés
+      &nbsp;·&nbsp; <a href="/privacy.html" style="color:rgba(255,255,255,0.7)">Confidentialité</a>
+      &nbsp;·&nbsp; <a href="/data-deletion.html" style="color:rgba(255,255,255,0.7)">Suppression des données</a>
+    </div>
   </footer>
 
   <!-- MODAL GAGNANT -->

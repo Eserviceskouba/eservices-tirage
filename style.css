@@ -1038,6 +1038,11 @@ textarea:focus { border-color: var(--primary); }
   margin-bottom: 20px;
 }
 
+.owner-link-row {
+  margin-top: 12px;
+  text-align: center;
+}
+
 .meta-user-row {
   display: flex;
   align-items: center;

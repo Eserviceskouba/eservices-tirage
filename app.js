@@ -346,8 +346,8 @@ async function importMagic() {
   // Facebook / Instagram : pas de lien direct → on dirige vers le sélecteur de publication
   if (platform === 'facebook' || platform === 'instagram') {
     if (!window.metaConnected) {
-      showToast('🔒 Connectez votre compte Facebook/Instagram d\'abord');
-      connectInstagram();
+      showToast('👇 Connectez votre compte dans la section ci-dessous');
+      document.querySelector('.meta-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     // Connecté : basculer sur la bonne plateforme et faire défiler vers le sélecteur
@@ -382,8 +382,8 @@ async function importMagic() {
     if (response.status === 401 && data.need_auth) {
       progress.classList.add('hidden');
       btn.disabled = false;
-      showToast(`🔒 Connectez votre compte ${names[platform]} d'abord`);
-      connectInstagram();
+      showToast('👇 Connectez votre compte dans la section ci-dessous');
+      document.querySelector('.meta-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!response.ok || data.error) throw new Error(data.error || 'Erreur inconnue');
@@ -444,7 +444,13 @@ function updateMetaUI(connected, name, system) {
   }
 }
 
-async function connectInstagram() {
+// Client : connexion avec son propre compte Facebook/Instagram (OAuth)
+function connectClient() {
+  window.location.href = '/auth/facebook';
+}
+
+// Propriétaire : connexion par mot de passe (jeton système)
+async function ownerLogin() {
   // Si déjà authentifié (session) → reconnexion directe
   try {
     const r = await fetch('/auth/reconnect').then(res => res.json());
@@ -455,7 +461,6 @@ async function connectInstagram() {
     }
   } catch {}
 
-  // Sinon → demande le mot de passe propriétaire
   const pwd = prompt('🔒 Mot de passe propriétaire (accès Facebook / Instagram) :');
   if (pwd === null || pwd === '') return;
   try {
