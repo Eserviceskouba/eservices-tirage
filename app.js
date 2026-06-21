@@ -445,7 +445,7 @@ function updateMetaUI(connected, name, system) {
 }
 
 async function connectInstagram() {
-  // En mode jeton système : reconnexion directe (1 clic). Sinon : OAuth.
+  // Si déjà authentifié (session) → reconnexion directe
   try {
     const r = await fetch('/auth/reconnect').then(res => res.json());
     if (r.connected) {
@@ -454,7 +454,26 @@ async function connectInstagram() {
       return;
     }
   } catch {}
-  window.location.href = '/auth/facebook';
+
+  // Sinon → demande le mot de passe propriétaire
+  const pwd = prompt('🔒 Mot de passe propriétaire (accès Facebook / Instagram) :');
+  if (pwd === null || pwd === '') return;
+  try {
+    const res = await fetch('/auth/owner-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    const data = await res.json();
+    if (res.ok && data.connected) {
+      showToast('✅ Connecté (propriétaire)');
+      checkMetaAuth();
+    } else {
+      showToast(`❌ ${data.error || 'Mot de passe incorrect'}`);
+    }
+  } catch {
+    showToast('❌ Erreur de connexion');
+  }
 }
 
 async function disconnectMeta() {

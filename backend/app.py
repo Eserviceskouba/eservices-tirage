@@ -27,14 +27,23 @@ FB_APP_SECRET     = os.getenv('FB_APP_SECRET', '')
 FB_REDIRECT_URI   = os.getenv('FB_REDIRECT_URI', 'http://localhost:5000/auth/facebook/callback')
 FB_CONFIG_ID      = os.getenv('FB_CONFIG_ID', '')
 FB_SYSTEM_TOKEN   = os.getenv('FB_SYSTEM_TOKEN', '')
+OWNER_PASSWORD    = os.getenv('OWNER_PASSWORD', '')
 
 
 def meta_user_token():
-    """Jeton à utiliser pour Meta : jeton système (.env) en priorité, sinon session OAuth.
-    Renvoie None si l'utilisateur s'est déconnecté manuellement."""
+    """Jeton Meta à utiliser pour la session courante.
+    - Client connecté via OAuth → son propre jeton (multi-clients).
+    - Propriétaire authentifié par mot de passe → jeton système (.env).
+    - Visiteur anonyme → None (rien n'est exposé)."""
     if session.get('meta_logged_out'):
         return None
-    return FB_SYSTEM_TOKEN or session.get('fb_access_token')
+    # Client : son propre compte (OAuth)
+    if session.get('fb_access_token'):
+        return session['fb_access_token']
+    # Propriétaire : jeton système, UNIQUEMENT après mot de passe
+    if session.get('owner_authed') and FB_SYSTEM_TOKEN:
+        return FB_SYSTEM_TOKEN
+    return None
 TT_CLIENT_KEY     = os.getenv('TT_CLIENT_KEY', '')
 TT_CLIENT_SECRET  = os.getenv('TT_CLIENT_SECRET', '')
 TT_REDIRECT_URI   = os.getenv('TT_REDIRECT_URI', 'http://localhost:5000/auth/tiktok/callback')
@@ -455,39 +464,52 @@ def auth_status():
     if session.get('meta_logged_out'):
         return jsonify({"connected": False})
 
-    # Mode jeton système : connecté en permanence (compte du propriétaire), prioritaire
-    if FB_SYSTEM_TOKEN:
-        return jsonify({"connected": True, "name": "E-services", "system": True})
-
+    # Client connecté via OAuth (son propre compte)
     token = session.get('fb_access_token')
-    if not token:
-        return jsonify({"connected": False})
+    if token:
+        r = requests.get("https://graph.facebook.com/v18.0/me", params={"access_token": token}, timeout=5)
+        data = r.json()
+        if "error" in data:
+            session.pop('fb_access_token', None)
+            return jsonify({"connected": False})
+        return jsonify({"connected": True, "name": data.get("name", "")})
 
-    # Vérifier que le token est encore valide
-    r = requests.get("https://graph.facebook.com/v18.0/me", params={"access_token": token}, timeout=5)
-    data = r.json()
-    if "error" in data:
-        session.pop('fb_access_token', None)
-        return jsonify({"connected": False})
+    # Propriétaire authentifié par mot de passe → jeton système
+    if session.get('owner_authed') and FB_SYSTEM_TOKEN:
+        return jsonify({"connected": True, "name": "E-services (propriétaire)", "system": True})
 
-    return jsonify({"connected": True, "name": data.get("name", "")})
+    # Visiteur anonyme : rien d'exposé
+    return jsonify({"connected": False})
 
 
 @app.route('/auth/logout')
 def auth_logout():
     session.pop('fb_access_token', None)
     session.pop('fb_pages', None)
+    session.pop('owner_authed', None)
     session['meta_logged_out'] = True
     return jsonify({"success": True})
 
 
+@app.route('/auth/owner-login', methods=['POST'])
+def auth_owner_login():
+    """Connexion du propriétaire par mot de passe → débloque le jeton système."""
+    if not OWNER_PASSWORD or not FB_SYSTEM_TOKEN:
+        return jsonify({"error": "Mode propriétaire non configuré"}), 400
+    data = request.get_json() or {}
+    if data.get('password', '') != OWNER_PASSWORD:
+        return jsonify({"error": "Mot de passe incorrect"}), 401
+    session['owner_authed'] = True
+    session.pop('meta_logged_out', None)
+    return jsonify({"connected": True})
+
+
 @app.route('/auth/reconnect')
 def auth_reconnect():
-    """Annule la déconnexion manuelle et reconnecte via le jeton système si présent."""
+    """Annule la déconnexion manuelle (reprend l'état précédent : propriétaire ou client)."""
     session.pop('meta_logged_out', None)
-    if FB_SYSTEM_TOKEN:
-        return jsonify({"connected": True})
-    return jsonify({"connected": False})
+    connected = bool((session.get('owner_authed') and FB_SYSTEM_TOKEN) or session.get('fb_access_token'))
+    return jsonify({"connected": connected})
 
 
 # ===== TIKTOK =====
